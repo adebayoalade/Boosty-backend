@@ -7,7 +7,7 @@ const router = express.Router();
 //get recommendations based on total wattage and hours of multiple items
 router.post("/recommend", async (req, res) => {
   try {
-    let { items } = req.body; // Expect an array of items with nameOfItem, quantity, wattage, dayHours, nightHours
+    let { items } = req.body; 
     
     if (!items || (Array.isArray(items) && items.length === 0)) {
       return res.status(400).json({ message: "Items are required" });

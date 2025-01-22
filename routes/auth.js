@@ -169,14 +169,6 @@ try {
   
   // Store refresh token in user document
   await User.findByIdAndUpdate(user._id, { refreshToken });
-  
-  // Set refresh token in cookie
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  });
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -195,7 +187,7 @@ try {
       console.error('Login notification email sending error:', emailError);
   }
   
-  res.status(200).json({ ...others, accessToken });
+  res.status(200).json({ ...others, accessToken, refreshToken });
 } catch (error) {
   console.error('Login error:', error);
   res.status(500).json({ message: "Login failed. Please try again." });
