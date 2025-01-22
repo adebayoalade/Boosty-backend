@@ -2,16 +2,23 @@ const mongoose = require("mongoose");
 
 const Itemschema = new mongoose.Schema(
     {
-        type: {
-            type: String,
-            required: true,
-            enum: ['business', 'home'],
-        },
-        address: {
+        nameOfItem: {
             type: String,
             required: true,
         },
-        budget: {
+        quantity: {
+            type: Number,
+            required: true,
+        },
+        dayHours: {
+            type: Number,
+            required: true,
+        },
+        nightHours: {
+            type: Number,
+            required: true,
+        },
+        wattage: {
             type: Number,
             required: true,
         },
