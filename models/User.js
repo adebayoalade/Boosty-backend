@@ -2,36 +2,36 @@ const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema(
   {
-    username: { 
-        type: String,
-        required: true,
-        unique: true
-     },
-    email: { 
-        type: String, 
-        required: true, 
-        unique: true 
-    },
-    password: { 
-        type: String, 
-        required: true 
-    },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
-    otp: {
-      type: Number,
+    clerkId: {
+      type: String,
       required: true,
+      unique: true
     },
-    otpExpiry: {
-      type: Date,
+    username: {
+      type: String,
       required: true,
+      unique: true
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true
+    },
+    password: {
+      type: String,
+      required: true
     },
     isAdmin: {
       type: Boolean,
-      default: false,
+      default: false
     },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    refreshToken: {
+      type: String
+    }
   },
   { timestamps: true }
 );

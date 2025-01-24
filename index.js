@@ -3,7 +3,7 @@ const cors = require("cors");
 const app = express();
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-const clerk = require('@clerk/express');
+const { clerkMiddleware } = require('@clerk/express');
 
 
 // use the exported router
@@ -28,7 +28,8 @@ mongoose
 app.use(cors());
 //Use the route
 app.use(express.json());
-app.use(clerk.clerkMiddleware({ secretKey: process.env.CLERK_SECRET_KEY, publishableKey: process.env.CLERK_PUBLISHABLE_KEY }));
+app.use(clerkMiddleware());
+ 
 
 app.use("/api/users", userRoute);
 app.use("/api/auth", authRoute);
