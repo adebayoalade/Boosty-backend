@@ -1,76 +1,59 @@
 const express = require("express");
 const router = express.Router();
-
+const clerk = require('@clerk/express');
 const cryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { verifyToken } = require("../middleware/verifyToken");
-const nodemailer = require("nodemailer");
-
-
-const transporter = nodemailer.createTransport({
-service: 'gmail',
-secure: true,
-auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD
-},
-tls: {
-    rejectUnauthorized: false
-}
-});
 
 //register
 router.post("/register", async(req, res) => {
-try {
-    const existingUser = await User.findOne({ 
-        $or: [
-            { email: req.body.email },
-            { username: req.body.username }
-        ]
-    });
-
-    if (existingUser) {
-        return res.status(400).json({ message: "Username or email already exists" });
-    }
-
-    const newUser = new User({
-        username: req.body.username,
-        email: req.body.email,
-        password: cryptoJS.AES.encrypt(
-            req.body.password,
-            process.env.PASS_SEC,
-        ).toString(),
-        isVerified: false,
-        otp: Math.floor(100000 + Math.random() * 900000), // Generate 6-digit OTP
-        otpExpiry: new Date(Date.now() + 10 * 60 * 1000), // OTP valid for 10 minutes
-    });
-
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: req.body.email,
-        subject: "Email Verification",
-        html: `
-            <h2>Welcome ${req.body.username}!</h2>
-            <p>Your verification code is: <strong>${newUser.otp}</strong></p>
-            <p>This code will expire in 10 minutes.</p>
-        `
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        const savedUser = await newUser.save();
-        res.status(201).json({ message: "Please check your email for verification code", userId: savedUser._id });
-    } catch (emailError) {
-        console.error('Email sending error:', emailError);
-        return res.status(500).json({ message: "Failed to send verification email. Please try again." });
-    }
-} catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ message: "Registration failed. Please try again." });
-}
+  try {
+      const existingUser = await User.findOne({ 
+          $or: [
+              { email: req.body.email },
+              { username: req.body.username }
+          ]
+      });
+  
+      if (existingUser) {
+          return res.status(400).json({ message: "Username or email already exists" });
+      }
+  
+      const newUser = new User({
+          username: req.body.username,
+          email: req.body.email,
+          password: cryptoJS.AES.encrypt(
+              req.body.password,
+              process.env.PASS_SEC,
+          ).toString(),
+          isVerified: false,
+          otp: Math.floor(100000 + Math.random() * 900000),
+          otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
+      });
+  
+      try {
+          await clerk.emails.send({
+              from: 'verification@yourapp.com',
+              to: req.body.email,
+              subject: "Email Verification",
+              htmlBody: `
+                  <h2>Welcome ${req.body.username}!</h2>
+                  <p>Your verification code is: <strong>${newUser.otp}</strong></p>
+                  <p>This code will expire in 10 minutes.</p>
+              `
+          });
+          const savedUser = await newUser.save();
+          res.status(201).json({ message: "Please check your email for verification code", userId: savedUser._id });
+      } catch (emailError) {
+          console.error('Email sending error:', emailError);
+          return res.status(500).json({ message: "Failed to send verification email", error: emailError.message });
+      }
+  } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ message: "Registration failed. Please try again." });
+  }
 });
-
 
 
 // Verify OTP
@@ -96,19 +79,17 @@ try {
     user.otpExpiry = undefined;
     await user.save();
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: "Welcome to Your App",
-        html: `
-            <h2>Welcome ${user.username}!</h2>
-            <p>Thank you for verifying your email.</p>
-            <p>You can now login to your account.</p>
-        `
-    };
-
     try {
-        await transporter.sendMail(mailOptions);
+        await clerk.emails.createEmail({
+            fromEmailName: "welcome",
+            to: user.email,
+            subject: "Welcome to Your App",
+            body: `
+                <h2>Welcome ${user.username}!</h2>
+                <p>Thank you for verifying your email.</p>
+                <p>You can now login to your account.</p>
+            `
+        });
     } catch (emailError) {
         console.error('Welcome email sending error:', emailError);
     }
@@ -170,19 +151,17 @@ try {
   // Store refresh token in user document
   await User.findByIdAndUpdate(user._id, { refreshToken });
 
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: user.email,
-    subject: "New Login Detected",
-    html: `
-        <h2>Hello ${user.username}</h2>
-        <p>We detected a new login to your account.</p>
-        <p>If this wasn't you, please secure your account immediately.</p>
-    `
-  };
-
   try {
-      await transporter.sendMail(mailOptions);
+      await clerk.emails.createEmail({
+          fromEmailName: "security",
+          to: user.email,
+          subject: "New Login Detected",
+          body: `
+              <h2>Hello ${user.username}</h2>
+              <p>We detected a new login to your account.</p>
+              <p>If this wasn't you, please secure your account immediately.</p>
+          `
+      });
   } catch (emailError) {
       console.error('Login notification email sending error:', emailError);
   }
