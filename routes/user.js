@@ -8,7 +8,6 @@ const router = express.Router();
 
 //Update user
 router.put("/:id", verifyTokenAndAuthorization, async(req, res) => {
-//Confirming user password as another layer of the security, check user password for situation where the has changed it
 if (req.body.password) {
     req.body.password =  CryptoJS.AES.encrypt(
         req.body.password,
