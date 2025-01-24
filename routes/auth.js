@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { createClerkClient } = require('@clerk/backend');
+const { createClerkClient } = require("@clerk/backend");
 const cryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
@@ -8,14 +8,14 @@ const User = require("../models/User");
 // Register
 router.post("/register", async (req, res) => {
   try {
-    const clerk = createClerkClient({ 
-      secretKey: process.env.CLERK_SECRET_KEY 
+    const clerk = createClerkClient({
+      secretKey: process.env.CLERK_SECRET_KEY,
     });
 
     const clerkUser = await clerk.users.createUser({
       emailAddress: [req.body.email],
       username: req.body.username,
-      password: req.body.password
+      password: req.body.password,
     });
 
     const newUser = new User({
@@ -26,18 +26,17 @@ router.post("/register", async (req, res) => {
         req.body.password,
         process.env.PASS_SEC
       ).toString(),
-      isVerified: true
+      isVerified: true,
     });
 
     await newUser.save();
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: "User registered successfully",
-      userId: newUser._id 
+      userId: newUser._id,
     });
-
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error("Registration error:", error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -45,24 +44,27 @@ router.post("/register", async (req, res) => {
 // Login
 router.post("/login", async (req, res) => {
   try {
+    const clerk = createClerkClient({ 
+      secretKey: process.env.CLERK_SECRET_KEY 
+    });
+
+    // First verify with Clerk
+    const signInAttempt = await clerk.signIn.create({
+      identifier: req.body.username,
+      password: req.body.password,
+    });
+
+    if (!signInAttempt.status === "completed") {
+      return res.status(401).json("Invalid credentials");
+    }
+
+    // If Clerk verification successful, find user in our database
     const user = await User.findOne({
       username: req.body.username,
     });
     
     if (!user) {
-      return res.status(401).json("Wrong Username");
-    }
-
-    // Verify password
-    const hashedPassword = cryptoJS.AES.decrypt(
-      user.password,
-      process.env.PASS_SEC
-    );
-    
-    const originalPassword = hashedPassword.toString(cryptoJS.enc.Utf8);
-    
-    if (originalPassword !== req.body.password) {
-      return res.status(401).json("Wrong Password");
+      return res.status(401).json("User not found");
     }
 
     // Generate tokens
@@ -96,5 +98,6 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Login failed" });
   }
 });
+
 
 module.exports = router;
