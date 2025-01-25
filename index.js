@@ -6,6 +6,9 @@ const dotenv = require("dotenv");
 const { clerkMiddleware } = require('@clerk/express');
 
 
+dotenv.config();
+
+
 // use the exported router
 const userRoute = require("./routes/user");
 const authRoute = require("./routes/auth");
@@ -15,7 +18,6 @@ const paystackRoute = require("./routes/paystack");
 const orderRoute = require("./routes/order");
 
 
-dotenv.config();
 
 
 // connect our code to the database (MongoDB)
