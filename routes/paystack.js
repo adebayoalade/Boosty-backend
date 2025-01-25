@@ -13,7 +13,7 @@ router.post('/pay', async (req, res) => {
     const params = {
       email,
       amount: amount * 100, // Convert to kobo
-      callback_url: 'https://yourdomain.com/payment/callback',
+      callback_url: 'https://boostytech.com/payment/callback',
       reference: `ref-${Date.now()}`
     };
 
@@ -62,7 +62,7 @@ router.post('/pay-installment', async (req, res) => {
       email,
       amount: installmentAmount * 100,
       plan: planResponse.data.data.plan_code,
-      callback_url: 'https://yourdomain.com/payment/callback'
+      callback_url: 'https://boostytech.com/payment/callback'
     };
 
     const response = await axios.post(`${PAYSTACK_BASE_URL}/transaction/initialize`, transactionParams, {
