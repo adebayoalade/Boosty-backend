@@ -78,7 +78,7 @@ router.post("/recommend", async (req, res) => {
       }
     }
 
-    // Calculate total wattage and hours considering quantity
+    // Calculate total wattage
     const totalWattage = items.reduce((sum, item) => sum + Number(item.wattage), 0);
     const totalDayHours = items.reduce((sum, item) => sum + Number(item.dayHours), 0);
     const totalNightHours = items.reduce((sum, item) => sum + Number(item.nightHours), 0);
