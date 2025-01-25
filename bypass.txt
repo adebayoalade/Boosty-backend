@@ -1,0 +1,52 @@
+router.post("/login", async (req, res) => {
+  try {
+    // Find user by username
+    const user = await User.findOne({
+      username: req.body.username
+    });
+    
+    if (!user) {
+      return res.status(401).json("User not found");
+    }
+
+    // Decrypt and compare password for testing
+    const decryptedPassword = cryptoJS.AES.decrypt(
+      user.password, 
+      process.env.PASS_SEC
+    ).toString(cryptoJS.enc.Utf8);
+
+    if (decryptedPassword !== req.body.password) {
+      return res.status(401).json("Invalid credentials");
+    }
+
+    // Generate tokens
+    const accessToken = jwt.sign(
+      {
+        id: user._id,
+        isAdmin: user.isAdmin,
+      },
+      process.env.JWT_SEC,
+      { expiresIn: "15m" }
+    );
+
+    const refreshToken = jwt.sign(
+      {
+        id: user._id,
+        isAdmin: user.isAdmin,
+      },
+      process.env.JWT_REFRESH_SEC,
+      { expiresIn: "7d" }
+    );
+  
+    const { password, ...others } = user._doc;
+  
+    // Store refresh token
+    await User.findByIdAndUpdate(user._id, { refreshToken });
+
+    res.status(200).json({ ...others, accessToken, refreshToken });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: "Login failed" });
+  }
+});

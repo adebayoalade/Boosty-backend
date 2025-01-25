@@ -1,9 +1,72 @@
 const express = require("express");
-const {verifyToken, verifyTokenAndAdmin, verifyTokenAndAuthorization,} = require("../middleware/verifyToken");
+const {createClerkClient} = require('@clerk/backend');
+const {verifyTokenAndAdmin, verifyTokenAndAuthorization,} = require("../middleware/verifyToken");
 const User = require("../models/User");
 const CryptoJS = require("crypto-js");
 
 const router = express.Router();
+
+// Initialize Clerk
+const clerk = createClerkClient({
+    apiKey: process.env.CLERK_SECRET_KEY,
+});
+
+//forget password
+router.post("/forget-password", async (req, res) => { 
+    try {
+        // Find user in your database
+        const user = await User.findOne({ email: req.body.email });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Use Clerk to initiate password reset
+        await clerk.passwords.createPasswordReset({
+            emailAddress: req.body.email
+        });
+
+        res.status(200).json({ 
+            message: "Password reset link sent to email" 
+        });
+    } catch (error) {
+        console.error('Forget password error:', error);
+        res.status(500).json({ error: "Error processing password reset" });
+    }
+});
+
+// Reset Password Route
+router.post("/reset-password", async (req, res) => {
+    try {
+        const { token, password } = req.body;
+
+        // Validate password strength
+        if (password.length < 8) {
+            return res.status(400).json({ error: "Password must be at least 8 characters" });
+        }
+
+        // Use Clerk to reset password
+        const resetResult = await clerk.passwords.resetPassword({
+            token,
+            password
+        });
+
+        //Update encrypted password in your custom User model
+        const user = await User.findOne({ email: resetResult.emailAddress });
+        if (user) {
+            user.password = CryptoJS.AES.encrypt(
+                password,
+                process.env.PASS_SEC
+            ).toString();
+            await user.save();
+        }
+
+        res.status(200).json({ message: "Password reset successful" });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ error: "Error resetting password" });
+    }
+});
+
 
 
 //Update user
@@ -29,79 +92,6 @@ try {
 }
 });
 
-//Forget Password
-router.post("/forget", async(req, res) => {
-    try {
-        const user = await User.findOne({ email: req.body.email });
-        if (!user) {
-            return res.status(404).json("User not found!");
-        }
-
-        // Generate reset token
-        const resetToken = Math.random().toString(36).slice(-12);
-        const tokenExpiry = Date.now() + 1800000; // Token valid for 30 min
-
-        // Update user with reset token
-        await User.findByIdAndUpdate(
-            user._id,
-            {
-                $set: { 
-                    resetPasswordToken: resetToken,
-                    resetPasswordExpire: tokenExpiry 
-                },
-            },
-            { new: true }
-        );
-
-        // In real application, send email with reset link
-        // For demo, just sending token in response
-        res.status(200).json({
-            message: "Password reset link has been generated",
-            resetToken: resetToken
-        });
-    } catch (error) {
-        res.status(500).json(error);
-    }
-});
-
-//Reset Password
-router.post("/reset/:token", async(req, res) => {
-    try {
-        const user = await User.findOne({
-            resetPasswordToken: req.params.token,
-            resetPasswordExpire: { $gt: Date.now() }
-        });
-
-        if (!user) {
-            return res.status(400).json("Invalid or expired reset token");
-        }
-
-        // Encrypt new password
-        const encryptedPassword = CryptoJS.AES.encrypt(
-            req.body.newPassword,
-            process.env.PASS_SEC
-        ).toString();
-
-        // Update user with new password
-        await User.findByIdAndUpdate(
-            user._id,
-            {
-                $set: { 
-                    password: encryptedPassword,
-                    resetPasswordToken: undefined,
-                    resetPasswordExpire: undefined
-                },
-            },
-            { new: true }
-        );
-
-        res.status(200).json({
-            message: "Password has been reset successfully"
-        });
-    } catch (error) {
-        res.status(500).json(error);
-    }
-});
 
 //delete user
 router.delete("/:id", verifyTokenAndAuthorization, async(req, res) => {
@@ -165,4 +155,6 @@ router.get("/stats", verifyTokenAndAdmin, async(req, res) => {
     res.status(500).json(error);
   }
 });
+
+
 module.exports = router;
