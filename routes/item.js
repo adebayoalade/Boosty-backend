@@ -98,9 +98,17 @@ router.post("/recommend", async (req, res) => {
 
     if (totalWattage >= 0 && totalWattage <= 3125) {
       recommendations.push({
-        panel: "monocrystaline solar penel",
-        generator: "pure sine wave solar generator",
-        battery: "lithium battery",
+        panel: " 450w monocrystaline solar penel",
+        panelQuantity: 4,
+        panelImage: "https://images.pexels.com/photos/159243/solar-solar-cells-photovoltaic-environmentally-friendly-159243.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        generator: " 2.5kva pure sine wave solar generator",
+        generatorImage: "https://media.istockphoto.com/id/1352803381/photo/solar-panel-inverter.jpg?b=1&s=612x612&w=0&k=20&c=Hyltw_GouBpRsROeOZdxyNSr6Lzeo6eyeppYfXMLTmY=",
+        generatorQuantity: 1,
+        generatorWarranty: "2 years warranty",
+        battery: " 2.56kw lithium battery",
+        batteryQuantity: 1,
+        batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
+        batteryWarranty: "10 years warranty",
         amount: 2590000,
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
@@ -108,9 +116,17 @@ router.post("/recommend", async (req, res) => {
 
     if (totalWattage >= 3126 && totalWattage <= 3750) {
       recommendations.push({
-        panel: "monocrystaline solar panel",
-        inverter: "pure sine wave hybrid inverter",
-        battery: "lithium battery",
+        panel: " 450w monocrystaline solar penel",
+        panelQuantity: 8,
+        panelImage: "https://images.pexels.com/photos/159243/solar-solar-cells-photovoltaic-environmentally-friendly-159243.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        inverter: " 3kva pure sine wave hybrid inverter",
+        inverterImage: "https://media.istockphoto.com/id/1352803381/photo/solar-panel-inverter.jpg?b=1&s=612x612&w=0&k=20&c=Hyltw_GouBpRsROeOZdxyNSr6Lzeo6eyeppYfXMLTmY=",
+        inverterQuantity: 1,
+        inverterWarranty: "2 years warranty",
+        battery: " 5kw lithium battery",
+        batteryQuantity: 1,
+        batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
+        batteryWarranty: "10 years warranty",
         amount: 4460000,
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
@@ -118,27 +134,51 @@ router.post("/recommend", async (req, res) => {
 
     if (totalWattage >= 3751 && totalWattage <= 6250) {
       recommendations.push({
-        panel: "monocrystaline solar panel",
-        inverter: "pure sine wave hybrid inverter",
-        battery: "lithium battery",
+        panel: " 450w monocrystaline solar penel",
+        panelQuantity: 10,
+        panelImage: "https://images.pexels.com/photos/159243/solar-solar-cells-photovoltaic-environmentally-friendly-159243.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        inverter: " 5kva pure sine wave hybrid inverter",
+        inverterImage: "https://media.istockphoto.com/id/1352803381/photo/solar-panel-inverter.jpg?b=1&s=612x612&w=0&k=20&c=Hyltw_GouBpRsROeOZdxyNSr6Lzeo6eyeppYfXMLTmY=",
+        inverterQuantity: 1,
+        inverterWarranty: "2 years warranty",
+        battery: " 5kw lithium battery",
+        batteryQuantity: 1,
+        batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
+        batteryWarranty: "10 years warranty",
         amount: 5150000,
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       },
       {
-        panel: "monocrystaline solar panel",
-        inverter: "pure sine wave hybrid inverter",
-        battery: "lithium battery",
+        panel: " 450w monocrystaline solar penel",
+        panelQuantity: 15,
+        panelImage: "https://images.pexels.com/photos/159243/solar-solar-cells-photovoltaic-environmentally-friendly-159243.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        inverter: " 5kva pure sine wave hybrid inverter",
+        inverterImage: "https://media.istockphoto.com/id/1352803381/photo/solar-panel-inverter.jpg?b=1&s=612x612&w=0&k=20&c=Hyltw_GouBpRsROeOZdxyNSr6Lzeo6eyeppYfXMLTmY=",
+        inverterQuantity: 1,
+        inverterWarranty: "2 years warranty",
+        battery: " 5kw lithium battery",
+        batteryQuantity: 1,
+        batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
+        batteryWarranty: "10 years warranty",
         amount: 7955000,
-        dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh" 
+        dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       }
     );
     }
 
     if (totalWattage >= 6251 && totalWattage <= 12500) {
       recommendations.push({
-        panel: "monocrystaline solar panel",
-        inverter: "pure sine wave hybrid inverter",
-        battery: "lithium battery",
+        panel: " 450w monocrystaline solar penel",
+        panelQuantity: 20,
+        panelImage: "https://images.pexels.com/photos/159243/solar-solar-cells-photovoltaic-environmentally-friendly-159243.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+        inverter: " 10kva pure sine wave hybrid inverter",
+        inverterImage: "https://media.istockphoto.com/id/1352803381/photo/solar-panel-inverter.jpg?b=1&s=612x612&w=0&k=20&c=Hyltw_GouBpRsROeOZdxyNSr6Lzeo6eyeppYfXMLTmY=",
+        inverterQuantity: 1,
+        inverterWarranty: "2 years warranty",
+        battery: " 16kw lithium battery",
+        batteryQuantity: 1,
+        batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
+        batteryWarranty: "10 years warranty",
         amount: 11650000,
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
