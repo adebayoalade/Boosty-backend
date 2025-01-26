@@ -66,7 +66,7 @@ router.post("/recommend", async (req, res) => {
       return res.status(400).json({ message: "Items are required" });
     }
 
-    // Convert single item to array if needed
+    // Convert single item to array
     if (!Array.isArray(items)) {
       items = [items];
     }
@@ -96,39 +96,51 @@ router.post("/recommend", async (req, res) => {
 
     let recommendations = [];
 
-    if (totalWattage >= 100 && totalWattage <= 200) {
+    if (totalWattage >= 0 && totalWattage <= 3125) {
       recommendations.push({
-        minWattage: 100,
-        maxWattage: 200,
-        description: "Low Usage Range",
-        dailyConsumption: (totalWattage * (totalDayHours + totalNightHours)).toFixed(2) + " Wh"
+        panel: "monocrystaline solar penel",
+        generator: "pure sine wave solar generator",
+        battery: "lithium battery",
+        amount: 2590000,
+        dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
     }
 
-    if (totalWattage >= 201 && totalWattage <= 300) {
+    if (totalWattage >= 3126 && totalWattage <= 3750) {
       recommendations.push({
-        minWattage: 201,
-        maxWattage: 300,
-        description: "Medium Usage Range",
-        dailyConsumption: (totalWattage * (totalDayHours + totalNightHours)).toFixed(2) + " Wh"
+        panel: "monocrystaline solar panel",
+        inverter: "pure sine wave hybrid inverter",
+        battery: "lithium battery",
+        amount: 4460000,
+        dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
     }
 
-    if (totalWattage >= 301 && totalWattage <= 400) {
+    if (totalWattage >= 3751 && totalWattage <= 6250) {
       recommendations.push({
-        minWattage: 301,
-        maxWattage: 400,
-        description: "High Usage Range",
-        dailyConsumption: (totalWattage * (totalDayHours + totalNightHours)).toFixed(2) + " Wh"
-      });
+        panel: "monocrystaline solar panel",
+        inverter: "pure sine wave hybrid inverter",
+        battery: "lithium battery",
+        amount: 5150000,
+        dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
+      },
+      {
+        panel: "monocrystaline solar panel",
+        inverter: "pure sine wave hybrid inverter",
+        battery: "lithium battery",
+        amount: 7955000,
+        dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh" 
+      }
+    );
     }
 
-    if (totalWattage >= 401 && totalWattage <= 500) {
+    if (totalWattage >= 6251 && totalWattage <= 12500) {
       recommendations.push({
-        minWattage: 401,
-        maxWattage: 500,
-        description: "Very High Usage Range",
-        dailyConsumption: (totalWattage * (totalDayHours + totalNightHours)).toFixed(2) + " Wh"
+        panel: "monocrystaline solar panel",
+        inverter: "pure sine wave hybrid inverter",
+        battery: "lithium battery",
+        amount: 11650000,
+        dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
     }
     
