@@ -183,18 +183,14 @@ router.post("/recommend", async (req, res) => {
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
     }
-    
-    
-    const recommendedItems = await Item.find({
-      $or: recommendations.map(rec => ({
-        wattage: { $gte: rec.minWattage, $lte: rec.maxWattage }
-      }))
-    }).sort({ wattage: 1 });
+
+    if (recommendations.length === 0) {
+      return res.status(400).json({ message: "Total wattage is outside the supported range. Please contact support for custom solutions." });
+    }
     
     const result = {
       totalWattage,
       recommendations: recommendations,
-      recommendedItems: recommendedItems,
     };
     
     res.status(200).json(result);
@@ -202,5 +198,7 @@ router.post("/recommend", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+
 
 module.exports = router; // Export the router
