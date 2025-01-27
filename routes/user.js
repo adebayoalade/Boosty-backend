@@ -34,7 +34,7 @@ router.post("/forget-password", async (req, res) => {
     }
 });
 
-// Reset Password Route
+// Reset Password
 router.post("/reset-password", async (req, res) => {
     try {
         const { token, password } = req.body;
@@ -50,7 +50,7 @@ router.post("/reset-password", async (req, res) => {
             password
         });
 
-        //Update encrypted password in your custom User model
+        //Update encrypted password in your User model
         const user = await User.findOne({ email: resetResult.emailAddress });
         if (user) {
             user.password = CryptoJS.AES.encrypt(
@@ -67,93 +67,138 @@ router.post("/reset-password", async (req, res) => {
     }
 });
 
-
-
-//Update user
+// Update user
 router.put("/:id", verifyTokenAndAuthorization, async(req, res) => {
-if (req.body.password) {
-    req.body.password =  CryptoJS.AES.encrypt(
-        req.body.password,
-        process.env.PASS_SEC,
-    ).toString();
-}
-try {
-    const updatedUser = await User.findByIdAndUpdate(
-        req.params.id,
-        {
-            $set: req.body,
-        },
-        {new: true}
-    );
+    try {
+        const clerk = createClerkClient({
+            secretKey: process.env.CLERK_SECRET_KEY,
+        });
 
-    res.status(200).json(updatedUser);
-} catch (error) {
-    res.status(500).json(error);
-}
+        // First find the user to get their Clerk ID
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // If password is being updated
+        if (req.body.password) {
+            // Update password in Clerk
+            await clerk.users.updateUser(user.clerkId, {
+                password: req.body.password
+            });
+
+            // Update password in your database
+            req.body.password = CryptoJS.AES.encrypt(
+                req.body.password,
+                process.env.PASS_SEC
+            ).toString();
+        }
+
+        // If email is being updated
+        if (req.body.email) {
+            // Update email in Clerk
+            await clerk.users.updateUser(user.clerkId, {
+                emailAddress: [req.body.email]
+            });
+        }
+
+        // If username is being updated
+        if (req.body.username) {
+            // Update username in Clerk
+            await clerk.users.updateUser(user.clerkId, {
+                username: req.body.username
+            });
+        }
+
+        // Update user in your database
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.id,
+            {
+                $set: req.body,
+            },
+            { new: true }
+        );
+
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        console.error('Update error:', error);
+        res.status(500).json(error);
+    }
 });
 
-
-//delete user
+// Delete user
 router.delete("/:id", verifyTokenAndAuthorization, async(req, res) => {
     try {
+        const clerk = createClerkClient({
+            secretKey: process.env.CLERK_SECRET_KEY,
+        });
+
+        // First find the user to get their Clerk ID
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Delete user from Clerk
+        await clerk.users.deleteUser(user.clerkId);
+
+        // Delete user from your database
         await User.findByIdAndDelete(req.params.id);
-        res.status(200).json({message: "User has been deleted"});
+
+        res.status(200).json({ message: "User has been deleted" });
+    } catch (error) {
+        console.error('Delete error:', error);
+        res.status(500).json(error);
+    }
+});
+
+// Get single user
+router.get("/find/:id", verifyTokenAndAdmin, async(req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        const { password, ...others } = user._doc;
+        res.status(200).json(others);
     } catch (error) {
         res.status(500).json(error);
     }
 });
 
-//Get single user
-router.get("/find/:id", verifyTokenAndAdmin, async(req, res) => {
-  try {
-    const user = await User.findById(req.params.id);
-
-    const {password, ...others} = user._doc;
-    
-    res.status(200).json(others);
-  } catch (error) {
-    res.status(500).json(error);
-  }
-});
-
-//Get all user
+// Get all users
 router.get("/", verifyTokenAndAdmin, async(req, res) => {
     const query = req.query.new;
- try {
-    const users = query?
-    await User.find().sort({_id: -1 }).limit(5)
-    : await User.find();
-
-    res.status(200).json(users);
- } catch (error) {
-    res.status(500).json(error);
- }
+    try {
+        const users = query 
+            ? await User.find().sort({ _id: -1 }).limit(5)
+            : await User.find();
+        res.status(200).json(users);
+    } catch (error) {
+        res.status(500).json(error);
+    }
 });
 
-
-//Get user stats/ or onboarding stats
+// Get user stats
 router.get("/stats", verifyTokenAndAdmin, async(req, res) => {
     const date = new Date();
-    const pastYear = new Date(date.setFullYear(date.getFullYear() -1));
-  try {
-    const data = await User.aggregate([
-        { $match: { createdAt: { $gte: pastYear } } },
-      {
-        $project: {
-            month: { $month: "$createdAt" },
-        },
-      },
-      {
-        $group: {
-            _id: "$month",
-            total: { $sum: 1 },
+    const pastYear = new Date(date.setFullYear(date.getFullYear() - 1));
+    try {
+        const data = await User.aggregate([
+            { $match: { createdAt: { $gte: pastYear } } },
+            {
+                $project: {
+                    month: { $month: "$createdAt" },
+                },
             },
-        },
-    ]);
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json(error);
-  }
+            {
+                $group: {
+                    _id: "$month",
+                    total: { $sum: 1 },
+                },
+            },
+        ]);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json(error);
+    }
 });
 
 

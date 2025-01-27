@@ -1,49 +1,36 @@
 const express = require("express");
 const router = express.Router();
 const { createClerkClient } = require("@clerk/backend");
-const cryptoJS = require("crypto-js");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+const APIKEY = process.env.CLERK_SECRET_KEY;
+
 // Register
 router.post("/register", async (req, res) => {
+
   try {
     // Validate input
-    if (!req.body.email || !req.body.username || !req.body.password) {
+    if (!req.body.emailAddress || !req.body.username || !req.body.password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [
-        { email: req.body.email },
-        { username: req.body.username }
-      ]
-    });
-
-    if (existingUser) {
-      return res.status(409).json({ message: "User already exists" });
-    }
-
     const clerk = createClerkClient({
-      secretKey: process.env.CLERK_SECRET_KEY,
+      secretKey: APIKEY,
     });
 
+    // Create user in Clerk
     const clerkUser = await clerk.users.createUser({
-      emailAddress: [req.body.email],
+      emailAddress: req.body.emailAddress,
       username: req.body.username,
       password: req.body.password,
     });
 
+    // Create user in our database
     const newUser = new User({
       clerkId: clerkUser.id,
       username: req.body.username,
-      email: req.body.email,
-      password: cryptoJS.AES.encrypt(
-        req.body.password,
-        process.env.PASS_SEC
-      ).toString(),
-      isVerified: true,
+      email: req.body.emailAddress[0],
     });
 
     await newUser.save();
@@ -58,16 +45,24 @@ router.post("/register", async (req, res) => {
   }
 });
 
-
-
 // Login
 router.post("/login", async (req, res) => {
   try {
     const clerk = createClerkClient({
-       secretKey: process.env.CLERK_SECRET_KEY
+       secretKey: APIKEY
     });
 
-    // First, attempt to find a user by username
+    // Verify credentials with Clerk
+    const signInAttempt = await clerk.signIn.create({
+      identifier: req.body.username,
+      password: req.body.password
+    });
+
+    if (signInAttempt.status !== "complete") {
+      return res.status(401).json("Invalid credentials");
+    }
+
+    // Find user in our database
     const user = await User.findOne({
       username: req.body.username
     });
@@ -76,53 +71,41 @@ router.post("/login", async (req, res) => {
       return res.status(401).json("User not found");
     }
 
-    // Verify credentials with Clerk using email
-    try {
-      const clerkUser = await clerk.users.verifyPassword({
-        email: user.email,
-        password: req.body.password
-      });
+    // Generate tokens
+    const accessToken = jwt.sign(
+      {
+        id: user._id,
+        isAdmin: user.isAdmin,
+      },
+      process.env.JWT_SEC,
+      { expiresIn: "15m" }
+    );
 
-      if (!clerkUser) {
-        return res.status(401).json("Invalid credentials");
-      }
+    const refreshToken = jwt.sign(
+      {
+        id: user._id,
+        isAdmin: user.isAdmin,
+      },
+      process.env.JWT_REFRESH_SEC,
+      { expiresIn: "1d" }
+    );
 
-      // Generate tokens
-      const accessToken = jwt.sign(
-        {
-          id: user._id,
-          isAdmin: user.isAdmin,
-        },
-        process.env.JWT_SEC,
-        { expiresIn: "15m" }
-      );
+    const { password, ...others } = user._doc;
 
-      const refreshToken = jwt.sign(
-        {
-          id: user._id,
-          isAdmin: user.isAdmin,
-        },
-        process.env.JWT_REFRESH_SEC,
-        { expiresIn: "7d" }
-      );
-    
-      const { password, ...others } = user._doc;
-    
-      // Store refresh token
-      await User.findByIdAndUpdate(user._id, { refreshToken });
+    // Store refresh token
+    await User.findByIdAndUpdate(user._id, { refreshToken });
 
-      res.status(200).json({ ...others, accessToken, refreshToken });
-
-    } catch (clerkError) {
-      return res.status(401).json("Invalid credentials");
-    }
+    // Respond with the user data and tokens
+    res.status(200).json({ ...others, accessToken, refreshToken });
 
   } catch (error) {
-    console.error('Login error:', error);
+    // Handle errors based on Clerk's response
+    if (error?.response?.data?.message) {
+      return res.status(401).json(error.response.data.message);
+    }
     res.status(500).json({ message: "Login failed" });
   }
 });
-
 
 
 
