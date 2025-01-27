@@ -2,7 +2,6 @@ const express = require("express");
 const {createClerkClient} = require('@clerk/backend');
 const {verifyTokenAndAdmin, verifyTokenAndAuthorization,} = require("../middleware/verifyToken");
 const User = require("../models/User");
-const CryptoJS = require("crypto-js");
 
 const router = express.Router();
 
@@ -29,7 +28,6 @@ router.post("/forget-password", async (req, res) => {
             message: "Password reset link sent to email" 
         });
     } catch (error) {
-        console.error('Forget password error:', error);
         res.status(500).json({ error: "Error processing password reset" });
     }
 });
@@ -50,19 +48,15 @@ router.post("/reset-password", async (req, res) => {
             password
         });
 
-        //Update encrypted password in your User model
+        //Update password in your User model
         const user = await User.findOne({ email: resetResult.emailAddress });
         if (user) {
-            user.password = CryptoJS.AES.encrypt(
-                password,
-                process.env.PASS_SEC
-            ).toString();
+            user.password = password;
             await user.save();
         }
 
         res.status(200).json({ message: "Password reset successful" });
     } catch (error) {
-        console.error('Reset password error:', error);
         res.status(500).json({ error: "Error resetting password" });
     }
 });
@@ -88,10 +82,7 @@ router.put("/:id", verifyTokenAndAuthorization, async(req, res) => {
             });
 
             // Update password in your database
-            req.body.password = CryptoJS.AES.encrypt(
-                req.body.password,
-                process.env.PASS_SEC
-            ).toString();
+            req.body.password = req.body.password;
         }
 
         // If email is being updated
@@ -147,8 +138,7 @@ router.delete("/:id", verifyTokenAndAuthorization, async(req, res) => {
 
         res.status(200).json({ message: "User has been deleted" });
     } catch (error) {
-        console.error('Delete error:', error);
-        res.status(500).json(error);
+        res.status(500).json("Error deleting");
     }
 });
 
