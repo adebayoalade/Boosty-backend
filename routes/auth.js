@@ -36,11 +36,10 @@ router.post("/register", async (req, res) => {
     await newUser.save();
 
     res.status(201).json({
-      message: "User registered successfully",
+      message: "registeration successful",
       userId: newUser._id,
     });
   } catch (error) {
-    console.error("Registration error:", error);
     res.status(500).json({ message: "Registration failed" });
   }
 });
@@ -68,7 +67,7 @@ router.post("/login", async (req, res) => {
     });
     
     if (!user) {
-      return res.status(401).json("User not found");
+      return res.status(401).json("User does not exist");
     }
 
     // Generate tokens
@@ -101,8 +100,12 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     // Handle errors based on Clerk's response
     if (error?.response?.data?.message) {
-      return res.status(401).json(error.response.data.message);
-    }
+      return res.status(401).json({
+          success: false,
+          message: error.response.data.message,
+          error: "Invalid credentials. Please check your credentials and try again."
+      });
+  }
     res.status(500).json({ message: "Login failed" });
   }
 });
