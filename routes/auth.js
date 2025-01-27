@@ -6,6 +6,10 @@ const User = require("../models/User");
 
 const APIKEY = process.env.CLERK_SECRET_KEY;
 
+const clerk = createClerkClient({
+  secretKey: APIKEY,
+});
+
 // Register
 router.post("/register", async (req, res) => {
 
@@ -14,10 +18,6 @@ router.post("/register", async (req, res) => {
     if (!req.body.emailAddress || !req.body.username || !req.body.password) {
       return res.status(400).json({ message: "All fields are required" });
     }
-
-    const clerk = createClerkClient({
-      secretKey: APIKEY,
-    });
 
     // Create user in Clerk
     const clerkUser = await clerk.users.createUser({

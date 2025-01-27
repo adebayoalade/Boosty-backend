@@ -50,3 +50,16 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Login failed" });
   }
 });
+
+
+
+
+const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasNumbers = /\d/.test(password);
+      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+      if (!(hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar)) {
+          return res.status(400).json({ 
+              message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character" 
+          });
