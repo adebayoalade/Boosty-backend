@@ -10,27 +10,62 @@ const clerk = createClerkClient({
   secretKey: APIKEY,
 });
 
+// Validation helpers
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const validatePassword = (password) => {
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  return passwordRegex.test(password);
+};
+
+const validateUsername = (username) => {
+  return username.length >= 3 && username.length <= 20 && /^[a-zA-Z0-9_]+$/.test(username);
+};
+
 // Register
 router.post("/register", async (req, res) => {
-
   try {
+    const { emailAddress, username, password } = req.body;
+
     // Validate input
-    if (!req.body.emailAddress || !req.body.username || !req.body.password) {
+    if (!emailAddress || !username || !password) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Validate email format
+    if (!validateEmail(emailAddress)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Validate username format
+    if (!validateUsername(username)) {
+      return res.status(400).json({ 
+        message: "Username must be 3-20 characters long and contain only letters, numbers, and underscores" 
+      });
+    }
+
+    // Validate password strength
+    if (!validatePassword(password)) {
+      return res.status(400).json({ 
+        message: "Password must contain at least 8 characters, including uppercase, lowercase, number and special character" 
+      });
     }
 
     // Create user in Clerk
     const clerkUser = await clerk.users.createUser({
-      emailAddress: req.body.emailAddress,
-      username: req.body.username,
-      password: req.body.password,
+      emailAddress,
+      username,
+      password,
     });
 
     // Create user in our database
     const newUser = new User({
       clerkId: clerkUser.id,
-      username: req.body.username,
-      email: req.body.emailAddress[0],
+      username,
+      email: emailAddress[0],
     });
 
     await newUser.save();
@@ -40,6 +75,10 @@ router.post("/register", async (req, res) => {
       userId: newUser._id,
     });
   } catch (error) {
+    console.error('Registration error:', error);
+    if (error.code === 11000) { // MongoDB duplicate key error
+      return res.status(400).json({ message: "Username or email already exists" });
+    }
     res.status(500).json({ message: "Registration failed" });
   }
 });
@@ -47,14 +86,21 @@ router.post("/register", async (req, res) => {
 // Login
 router.post("/login", async (req, res) => {
   try {
+    const { username, password } = req.body;
+
+    // Validate input
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required" });
+    }
+
     const clerk = createClerkClient({
        secretKey: APIKEY
     });
 
     // Verify credentials with Clerk
     const signInAttempt = await clerk.signIn.create({
-      identifier: req.body.username,
-      password: req.body.password
+      identifier: username,
+      password
     });
 
     if (signInAttempt.status !== "complete") {
@@ -62,9 +108,7 @@ router.post("/login", async (req, res) => {
     }
 
     // Find user in our database
-    const user = await User.findOne({
-      username: req.body.username
-    });
+    const user = await User.findOne({ username });
     
     if (!user) {
       return res.status(401).json("User does not exist");
@@ -89,7 +133,7 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    const { password, ...others } = user._doc;
+    const { password: userPassword, ...others } = user._doc;
 
     // Store refresh token
     await User.findByIdAndUpdate(user._id, { refreshToken });
@@ -98,6 +142,7 @@ router.post("/login", async (req, res) => {
     res.status(200).json({ ...others, accessToken, refreshToken });
 
   } catch (error) {
+    console.error('Login error:', error);
     // Handle errors based on Clerk's response
     if (error?.response?.data?.message) {
       return res.status(401).json({
@@ -105,11 +150,10 @@ router.post("/login", async (req, res) => {
           message: error.response.data.message,
           error: "Invalid credentials. Please check your credentials and try again."
       });
-  }
+    }
     res.status(500).json({ message: "Login failed" });
   }
 });
-
 
 
 module.exports = router;

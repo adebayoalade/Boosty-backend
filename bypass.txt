@@ -1,24 +1,31 @@
+// Login
 router.post("/login", async (req, res) => {
   try {
-    // Find user by username
-    const user = await User.findOne({
-      username: req.body.username
-    });
-    
-    if (!user) {
-      return res.status(401).json("User not found");
+    const { username, password } = req.body;
+
+    // Validate input
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required" });
     }
 
-    // Decrypt and compare password for testing
-    const decryptedPassword = cryptoJS.AES.decrypt(
-      user.password, 
-      process.env.PASS_SEC
-    ).toString(cryptoJS.enc.Utf8);
+    // First find the user in our database to get their Clerk ID
+    const user = await User.findOne({ username });
+    
+    if (!user) {
+      return res.status(401).json("User does not exist");
+    }
 
-    if (decryptedPassword !== req.body.password) {
+    try {
+      // Use Clerk's backend API to verify the password
+      await clerk.users.verifyPassword({
+        userId: user.clerkId,
+        password: password
+      });
+    } catch (error) {
       return res.status(401).json("Invalid credentials");
     }
 
+    // If we get here, password is verified
     // Generate tokens
     const accessToken = jwt.sign(
       {
@@ -35,14 +42,15 @@ router.post("/login", async (req, res) => {
         isAdmin: user.isAdmin,
       },
       process.env.JWT_REFRESH_SEC,
-      { expiresIn: "7d" }
+      { expiresIn: "1d" }
     );
-  
-    const { password, ...others } = user._doc;
-  
+
+    const { password: userPassword, ...others } = user._doc;
+
     // Store refresh token
     await User.findByIdAndUpdate(user._id, { refreshToken });
 
+    // Respond with the user data and tokens
     res.status(200).json({ ...others, accessToken, refreshToken });
 
   } catch (error) {
@@ -53,13 +61,3 @@ router.post("/login", async (req, res) => {
 
 
 
-
-const hasUpperCase = /[A-Z]/.test(password);
-      const hasLowerCase = /[a-z]/.test(password);
-      const hasNumbers = /\d/.test(password);
-      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-      if (!(hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar)) {
-          return res.status(400).json({ 
-              message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character" 
-          });
