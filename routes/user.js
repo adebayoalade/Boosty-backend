@@ -48,7 +48,6 @@ router.post("/forget-password", limiter, async (req, res) => {
             message: "If a user with this email exists, a password reset link has been sent"
         });
     } catch (error) {
-        console.error('Password reset request error:', error);
         res.status(500).json({ error: "Unable to process password reset request" });
     }
 });
@@ -160,7 +159,6 @@ router.delete("/:id", verifyTokenAndAuthorization, async(req, res) => {
 
         res.status(200).json({ message: "User successfully deleted" });
     } catch (error) {
-        console.error('Delete error:', error);
         res.status(500).json({ error: "Unable to delete user" });
     }
 });
@@ -176,7 +174,6 @@ router.get("/find/:id", verifyTokenAndAdmin, async(req, res) => {
         const { password, ...userWithoutPassword } = user._doc;
         res.status(200).json(userWithoutPassword);
     } catch (error) {
-        console.error('Find user error:', error);
         res.status(500).json({ error: "Unable to retrieve user" });
     }
 });
@@ -203,7 +200,6 @@ router.get("/", verifyTokenAndAdmin, async(req, res) => {
             totalUsers: total
         });
     } catch (error) {
-        console.error('Get users error:', error);
         res.status(500).json({ error: "Unable to retrieve users" });
     }
 });
@@ -251,7 +247,6 @@ router.get("/stats", verifyTokenAndAdmin, async(req, res) => {
 
         res.status(200).json(data);
     } catch (error) {
-        console.error('Stats error:', error);
         res.status(500).json({ error: "Unable to retrieve user statistics" });
     }
 });
