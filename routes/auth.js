@@ -3,6 +3,7 @@ const router = express.Router();
 const { createClerkClient } = require("@clerk/backend");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const limiter = require("../middleware/limiter");
 
 const APIKEY = process.env.CLERK_SECRET_KEY;
 
@@ -88,7 +89,7 @@ router.post("/register", async (req, res) => {
 });
 
 // Login Route
-router.post("/login", async (req, res) => {
+router.post("/login", limiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -137,8 +138,8 @@ router.post("/login", async (req, res) => {
     await User.findByIdAndUpdate(user._id, { refreshToken });
 
     // Respond with the user data and tokens
-    const { password: userPassword, ...others } = user._doc;
-    res.status(200).json({ ...others, accessToken, refreshToken });
+    const { password: userPassword, refreshToken: storedRefreshToken, ...others } = user._doc;
+    res.status(200).json({ ...others, accessToken });
 
   } catch (error) {
     res.status(500).json({ message: "Login failed" });
