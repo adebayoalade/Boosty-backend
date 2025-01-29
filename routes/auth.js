@@ -25,18 +25,21 @@ const validateUsername = (username) => {
   return username.length >= 3 && username.length <= 20 && /^[a-zA-Z0-9_]+$/.test(username);
 };
 
-// Register
+// Register Route
 router.post("/register", async (req, res) => {
   try {
-    const { emailAddress, username, password } = req.body;
+    let { emailAddress, username, password } = req.body;
+
+    // Ensure emailAddress is a string if it's an array
+    const email = Array.isArray(emailAddress) ? emailAddress[0] : emailAddress;
 
     // Validate input
-    if (!emailAddress || !username || !password) {
+    if (!email || !username || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
     // Validate email format
-    if (!validateEmail(emailAddress)) {
+    if (!validateEmail(email)) {
       return res.status(400).json({ message: "Invalid email format" });
     }
 
@@ -50,13 +53,13 @@ router.post("/register", async (req, res) => {
     // Validate password strength
     if (!validatePassword(password)) {
       return res.status(400).json({ 
-        message: "Password must contain at least 8 characters, including uppercase, lowercase, number and special character" 
+        message: "Password must contain at least 8 characters, including uppercase, lowercase, number, and special character" 
       });
     }
 
     // Create user in Clerk
     const clerkUser = await clerk.users.createUser({
-      emailAddress,
+      emailAddress: [email], // Ensures Clerk gets an array
       username,
       password,
     });
@@ -65,17 +68,18 @@ router.post("/register", async (req, res) => {
     const newUser = new User({
       clerkId: clerkUser.id,
       username,
-      email: emailAddress[0],
+      email,
     });
 
     await newUser.save();
 
     res.status(201).json({
-      message: "registeration successful",
+      message: "Registration successful",
       userId: newUser._id,
     });
+
   } catch (error) {
-    //MongoDB duplicate key error
+    // MongoDB duplicate key error
     if (error.code === 11000) {
       return res.status(400).json({ message: "Username or email already exists" });
     }
@@ -83,7 +87,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Login
+// Login Route
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -93,25 +97,21 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Username and password are required" });
     }
 
-    const clerk = createClerkClient({
-       secretKey: APIKEY
-    });
-
     // Verify credentials with Clerk
     const signInAttempt = await clerk.signIn.create({
       identifier: username,
-      password
+      password,
     });
 
     if (signInAttempt.status !== "complete") {
-      return res.status(401).json("Invalid credentials");
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     // Find user in our database
     const user = await User.findOne({ username });
-    
+
     if (!user) {
-      return res.status(401).json("User does not exist");
+      return res.status(401).json({ message: "User does not exist" });
     }
 
     // Generate tokens
@@ -133,27 +133,16 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    const { password: userPassword, ...others } = user._doc;
-
     // Store refresh token
     await User.findByIdAndUpdate(user._id, { refreshToken });
 
     // Respond with the user data and tokens
+    const { password: userPassword, ...others } = user._doc;
     res.status(200).json({ ...others, accessToken, refreshToken });
 
   } catch (error) {
-    console.error('Login error:', error);
-    // Handle errors based on Clerk's response
-    if (error?.response?.data?.message) {
-      return res.status(401).json({
-          success: false,
-          message: error.response.data.message,
-          error: "Invalid credentials. Please check your credentials and try again."
-      });
-    }
     res.status(500).json({ message: "Login failed" });
   }
 });
-
 
 module.exports = router;
