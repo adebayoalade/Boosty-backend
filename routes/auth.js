@@ -93,24 +93,27 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Username and password are required" });
     }
 
-    // First find the user in our database to get their Clerk ID
+    const clerk = createClerkClient({
+       secretKey: APIKEY
+    });
+
+    // Verify credentials with Clerk
+    const signInAttempt = await clerk.signIn.create({
+      identifier: username,
+      password
+    });
+
+    if (signInAttempt.status !== "complete") {
+      return res.status(401).json("Invalid credentials");
+    }
+
+    // Find user in our database
     const user = await User.findOne({ username });
     
     if (!user) {
       return res.status(401).json("User does not exist");
     }
 
-    try {
-      // Use Clerk's backend API to verify the password
-      await clerk.users.verifyPassword({
-        userId: user.clerkId,
-        password: password
-      });
-    } catch (error) {
-      return res.status(401).json("Invalid credentials");
-    }
-
-    // If we get here, password is verified
     // Generate tokens
     const accessToken = jwt.sign(
       {
@@ -140,6 +143,14 @@ router.post("/login", async (req, res) => {
 
   } catch (error) {
     console.error('Login error:', error);
+    // Handle errors based on Clerk's response
+    if (error?.response?.data?.message) {
+      return res.status(401).json({
+          success: false,
+          message: error.response.data.message,
+          error: "Invalid credentials. Please check your credentials and try again."
+      });
+    }
     res.status(500).json({ message: "Login failed" });
   }
 });
