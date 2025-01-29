@@ -16,6 +16,8 @@ const setupRoute = require("./routes/setup");
 const itemRoute = require("./routes/item");
 const paystackRoute = require("./routes/paystack");
 const orderRoute = require("./routes/order");
+const investorRoute = require("./routes/investor");
+const partnerRoute = require("./routes/partner");
 
 
 
@@ -39,6 +41,8 @@ app.use("/api/checkout", paystackRoute);
 app.use("/api/setup", setupRoute);
 app.use("/api/item", itemRoute);
 app.use("/api/order", orderRoute);
+app.use("/api/investor", investorRoute);
+app.use("/api/partner", partnerRoute);
 
 
 // to listen to the application

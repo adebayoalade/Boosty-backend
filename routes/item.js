@@ -1,34 +1,11 @@
 const express = require("express");
 const Item = require("../models/Item");
+const { verifyTokenAndAdmin } = require("../middleware/verifyToken");
 
 const router = express.Router();
 
-// Get all items from database
-router.get("/", async (req, res) => {
-  try {
-    const items = await Item.find();
-    res.status(200).json(items);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Get single item by ID
-router.get("/:id", async (req, res) => {
-  try {
-    const item = await Item.findById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ message: "Item not found" });
-    }
-    res.status(200).json(item);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-
 // Update item by ID
-router.put("/:id", async (req, res) => {
+router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const updatedItem = await Item.findByIdAndUpdate(
       req.params.id,
@@ -45,7 +22,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // Delete item by ID
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
   try {
     const deletedItem = await Item.findByIdAndDelete(req.params.id);
     if (!deletedItem) {
@@ -56,6 +33,36 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+
+// Get single item by ID
+router.get("/:id", async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+    res.status(200).json(item);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+// Get all items from database
+router.get("/", verifyTokenAndAdmin, async(req, res) => {
+    const query = req.query.new;
+ try {
+    const items = query?
+    await Item.find().sort({_id: -1 }).limit(5)
+    : await Item.find();
+
+    res.status(200).json(items);
+ } catch (error) {
+    res.status(500).json(error);
+ }
+});
+
 
 //get recommendations based on total wattage and hours of multiple items
 router.post("/recommend", async (req, res) => {
@@ -194,7 +201,7 @@ router.post("/recommend", async (req, res) => {
       });
     } 
 
-    
+
     if (recommendations.length === 0) {
       return res.status(400).json({ message: "Total wattage is outside the supported range. Please contact support for custom solutions." });
     }
