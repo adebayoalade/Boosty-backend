@@ -109,7 +109,9 @@ router.post("/recommend", async (req, res) => {
         batteryQuantity: 1,
         batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
         batteryWarranty: "10 years warranty",
-        amount: 2590000,
+        amount: 3108000,
+        vat: 233100,
+        totalAmount: 3341100,
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
     }
@@ -127,7 +129,9 @@ router.post("/recommend", async (req, res) => {
         batteryQuantity: 1,
         batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
         batteryWarranty: "10 years warranty",
-        amount: 4460000,
+        amount: 5352000,
+        vat: 401400,
+        totalAmount: 5753400,
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
     }
@@ -145,7 +149,9 @@ router.post("/recommend", async (req, res) => {
         batteryQuantity: 1,
         batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
         batteryWarranty: "10 years warranty",
-        amount: 5150000,
+        amount: 6180000,
+        vat: 463500,
+        totalAmount: 6643500,
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       },
       {
@@ -160,7 +166,9 @@ router.post("/recommend", async (req, res) => {
         batteryQuantity: 1,
         batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
         batteryWarranty: "10 years warranty",
-        amount: 7955000,
+        amount: 9546000,
+        vat: 715950,
+        totalAmount: 10261950,
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       }
     );
@@ -179,11 +187,14 @@ router.post("/recommend", async (req, res) => {
         batteryQuantity: 1,
         batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
         batteryWarranty: "10 years warranty",
-        amount: 11650000,
+        amount: 13980000,
+        vat: 1048500,
+        totalAmount: 15028500,
         dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
       });
-    }
+    } 
 
+    
     if (recommendations.length === 0) {
       return res.status(400).json({ message: "Total wattage is outside the supported range. Please contact support for custom solutions." });
     }
