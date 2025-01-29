@@ -8,6 +8,19 @@ const {
 
 const router = express.Router();
 
+// Create partner
+router.post("/", async (req, res) => {
+    const partner = new Partner(req.body);
+    try {
+      const savedPartner = await partner.save();
+      res.status(201).json(savedPartner);
+    } catch (error) {
+      res.status(400).json({ 
+        message: "Failed to create partner" 
+      });
+    }
+   });
+
 // Update investor by ID
 router.put("/:id", verifyTokenAndAuthorization, async (req, res) => {
  try {

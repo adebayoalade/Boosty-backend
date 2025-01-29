@@ -8,6 +8,19 @@ const {
 
 const router = express.Router();
 
+// Create investor
+router.post("/", async (req, res) => {
+    const investor = new Investor(req.body);
+    try {
+      const savedInvestor = await investor.save();
+      res.status(201).json(savedInvestor);
+    } catch (error) {
+      res.status(400).json({ 
+        message: "Failed to create investor" 
+      });
+    }
+   });
+
 // Update investor by ID
 router.put("/:id", verifyTokenAndAuthorization, async (req, res) => {
  try {

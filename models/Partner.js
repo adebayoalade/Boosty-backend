@@ -24,17 +24,13 @@ const PartnerSchema = new mongoose.Schema(
             required: true,
         },
         phoneNumber: {
-            type: Number,
+            type: String,
             required: true,
         },
         whichOneAreYou: {
             type: String,
             required: true,
-            enum: ['Manufacture', 'Installer', 'Retailer/Distributor'],
-        },
-        isAdmin: {
-            type: Boolean,
-            default: false,
+            enum: ['Manufacturer', 'Installer', 'Retailer/Distributor'],
         },
     },
     {timestamps: true}
