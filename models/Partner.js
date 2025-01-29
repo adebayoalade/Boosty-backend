@@ -32,6 +32,10 @@ const PartnerSchema = new mongoose.Schema(
             required: true,
             enum: ['Manufacturer', 'Installer', 'Retailer/Distributor'],
         },
+        isAdmin: {
+            type: Boolean,
+            default: false,
+        },
     },
     {timestamps: true}
 );
