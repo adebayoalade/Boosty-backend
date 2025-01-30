@@ -1,7 +1,5 @@
 const mongoose = require("mongoose");
 
-// User Schema
-
 const OrderSchema = new mongoose.Schema(
   {
     itemId: {
@@ -31,6 +29,16 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       default: "pending",
     },
+    paymentReference: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['pending', 'paid', 'failed'],
+      default: 'pending'
+    }
   },
   { timestamps: true }
 );
