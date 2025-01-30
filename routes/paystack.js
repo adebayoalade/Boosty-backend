@@ -68,12 +68,36 @@ router.post('/pay', async (req, res) => {
 // Installmental payment
 router.post('/pay-installment', async (req, res) => {
   try {
-    const { email, totalAmount, installments, orderId } = req.body;
+    const { email, totalAmount, installments, orderId, interval } = req.body;
 
-    if (!email || !totalAmount || !installments || !orderId) {
+    // Input validation
+    if (!email || !totalAmount || !installments || !orderId || !interval) {
       return res.status(400).json({
         status: false,
-        message: 'Email, totalAmount, installments and orderId are required'
+        message: 'Email, totalAmount, installments, orderId, and interval are required',
+      });
+    }
+
+    if (typeof totalAmount !== 'number' || totalAmount <= 0) {
+      return res.status(400).json({
+        status: false,
+        message: 'totalAmount must be a positive number',
+      });
+    }
+
+    if (!Number.isInteger(installments) || installments <= 0) {
+      return res.status(400).json({
+        status: false,
+        message: 'installments must be a positive integer',
+      });
+    }
+
+    // Validate interval
+    const validIntervals = ['daily', 'weekly', 'monthly', 'yearly'];
+    if (!validIntervals.includes(interval)) {
+      return res.status(400).json({
+        status: false,
+        message: 'interval must be one of: daily, weekly, monthly, yearly',
       });
     }
 
@@ -82,30 +106,39 @@ router.post('/pay-installment', async (req, res) => {
     if (!order) {
       return res.status(404).json({
         status: false,
-        message: 'Order not found'
+        message: 'Order not found',
       });
     }
 
+    // Check order status
+    if (order.status !== 'pending') {
+      return res.status(400).json({
+        status: false,
+        message: 'Order is not eligible for payment',
+      });
+    }
+
+    // Calculate installment amount
     const installmentAmount = Math.ceil(totalAmount / installments);
     const reference = `INSTALL_${orderId}_${Date.now()}`;
 
     // Create payment plan
     const planParams = {
       name: `Installment Plan-${Date.now()}`,
-      interval: 'monthly',
+      interval: interval,
       amount: installmentAmount * 100, // Convert to kobo
       send_invoices: true,
-      send_sms: true
+      send_sms: true,
     };
 
     const planResponse = await axios.post(
-      `${PAYSTACK_BASE_URL}/plan`, 
+      `${process.env.PAYSTACK_BASE_URL}/plan`,
       planParams,
       {
         headers: {
-          Authorization: `Bearer ${APIKEY}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${process.env.APIKEY}`,
+          'Content-Type': 'application/json',
+        },
       }
     );
 
@@ -115,33 +148,33 @@ router.post('/pay-installment', async (req, res) => {
       amount: installmentAmount * 100,
       plan: planResponse.data.data.plan_code,
       callback_url: 'http://localhost:3000/payment/callback',
-      reference
+      reference,
     };
 
     const response = await axios.post(
-      `${PAYSTACK_BASE_URL}/transaction/initialize`, 
+      `${process.env.PAYSTACK_BASE_URL}/transaction/initialize`,
       transactionParams,
       {
         headers: {
-          Authorization: `Bearer ${APIKEY}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${process.env.APIKEY}`,
+          'Content-Type': 'application/json',
+        },
       }
     );
 
     // Update order with payment reference
     await Order.findByIdAndUpdate(orderId, {
-      paymentReference: reference
+      paymentReference: reference,
     });
 
     res.status(200).json({
       status: true,
-      data: response.data.data
+      data: response.data.data,
     });
   } catch (error) {
     res.status(500).json({
       status: false,
-      message: error.response?.data?.message || error.message
+      message: error.response?.data?.message || error.message,
     });
   }
 });
