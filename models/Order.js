@@ -5,7 +5,7 @@ const OrderSchema = new mongoose.Schema(
     items: [
       {
         itemId: {
-          type: String,
+          type: mongoose.Schema.Types.ObjectId,
           ref: "Item",
           required: true,
         },
