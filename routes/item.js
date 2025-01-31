@@ -198,23 +198,6 @@ const generateRecommendations = (totalWattage, totalDayHours, totalNightHours) =
       vat: 463500,
       totalAmount: 6643500,
       dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
-    },
-    {
-      panel: " 450w monocrystaline solar penel",
-      panelQuantity: 15,
-      panelImage: "https://images.pexels.com/photos/159243/solar-solar-cells-photovoltaic-environmentally-friendly-159243.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-      inverter: " 5kva pure sine wave hybrid inverter",
-      inverterImage: "https://media.istockphoto.com/id/1352803381/photo/solar-panel-inverter.jpg?b=1&s=612x612&w=0&k=20&c=Hyltw_GouBpRsROeOZdxyNSr6Lzeo6eyeppYfXMLTmY=",
-      inverterQuantity: 1,
-      inverterWarranty: "2 years warranty",
-      battery: " 5kw lithium battery",
-      batteryQuantity: 1,
-      batteryImage: "https://media.istockphoto.com/id/1620576275/photo/close-up-view-of-home-battery-storage-system-on-building-facade.jpg?b=1&s=612x612&w=0&k=20&c=L5C8M4hfXLt_OscTaK_KnhY_GHXrIGGVvkMB3D6KS04=",
-      batteryWarranty: "10 years warranty",
-      amount: 9546000,
-      vat: 715950,
-      totalAmount: 10261950,
-      dailyConsumption: ((totalWattage * (totalDayHours + totalNightHours))/1000).toFixed(2) + " kWh"
     }
   );
   }
