@@ -33,7 +33,7 @@ router.post('/pay', async (req, res) => {
     const params = {
       email,
       amount: amount * 100, // Convert to kobo
-      callback_url: 'http://localhost:3000/payment/callback',
+      callback_url: 'http://boosty-backend.vercel.app/payment/callback',
       reference
     };
 
@@ -147,7 +147,7 @@ router.post('/pay-installment', async (req, res) => {
       email,
       amount: installmentAmount * 100,
       plan: planResponse.data.data.plan_code,
-      callback_url: 'http://localhost:3000/payment/callback',
+      callback_url: 'http://boosty-backend.vercel.app/payment/callback',
       reference,
     };
 
