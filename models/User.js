@@ -5,27 +5,20 @@ const UserSchema = new mongoose.Schema(
     clerkId: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
+      immutable: true
     },
     username: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
     },
     email: {
       type: String,
       required: true,
-      unique: true
-    },
-    password: {
-      type: String,
-      required: false
+      unique: true,
     },
     isAdmin: {
-      type: Boolean,
-      default: false
-    },
-    isVerified: {
       type: Boolean,
       default: false
     },

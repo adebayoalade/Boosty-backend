@@ -58,16 +58,12 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Create user in Clerk with mandatory MFA
+    // Create user in Clerk
     const clerkUser = await clerk.users.createUser({
-      emailAddress: [email],
+      emailAddress: [email], // Ensures Clerk gets an array
       username,
       password,
-      requireMFA: true // Enable mandatory MFA
     });
-
-    // Automatically create TOTP factor
-    const factor = await clerk.users.createTOTP(clerkUser.id);
 
     // Create user in our database
     const newUser = new User({
@@ -81,8 +77,6 @@ router.post("/register", async (req, res) => {
     res.status(201).json({
       message: "Registration successful",
       userId: newUser._id,
-      otpAuthUri: factor.otpAuthUri, // Return MFA setup info immediately
-      factorId: factor.id
     });
 
   } catch (error) {
@@ -100,47 +94,21 @@ router.post("/register", async (req, res) => {
 // Login Route
 router.post("/login", limiter, async (req, res) => {
   try {
-    const { username, password, mfaCode } = req.body;
+    const { username, password } = req.body;
 
     // Validate input
     if (!username || !password) {
       return res.status(400).json({ message: "Username and password are required" });
     }
 
-    // First step: Verify credentials with Clerk
+    // Verify credentials with Clerk
     const signInAttempt = await clerk.signIn.create({
       identifier: username,
       password,
     });
 
-    // MFA is mandatory, so we should always get needs_second_factor
-    if (signInAttempt.status === "needs_second_factor") {
-      if (!mfaCode) {
-        return res.status(400).json({ message: "MFA code is required" });
-      }
-
-      // Check MFA attempt limits
-      if (signInAttempt.totalAttempts >= MAX_MFA_ATTEMPTS) {
-        return res.status(401).json({ message: "Maximum MFA attempts exceeded" });
-      }
-
-      // Check if the MFA attempt has expired
-      if (new Date(signInAttempt.expireAt) < new Date()) {
-        return res.status(401).json({ message: "MFA attempt expired" });
-      }
-
-      // Verify the MFA code
-      const mfaVerification = await clerk.signIn.attemptSecondFactor({
-        signInId: signInAttempt.id,
-        strategy: "totp",
-        code: mfaCode,
-      });
-
-      if (mfaVerification.status !== "complete") {
-        return res.status(401).json({ message: "Invalid MFA code" });
-      }
-    } else {
-      return res.status(401).json({ message: "MFA verification required" });
+    if (signInAttempt.status !== "complete") {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     // Find user in our database
@@ -180,7 +148,5 @@ router.post("/login", limiter, async (req, res) => {
     res.status(500).json({ message: "Login failed" });
   }
 });
-
-
 
 module.exports = router;
