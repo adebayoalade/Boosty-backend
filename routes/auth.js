@@ -114,7 +114,6 @@ router.post("/verify-email", limiter, async (req, res) => {
     res.status(400).json({ message: "Verification failed", verified: false });
 
   } catch (error) {
-    console.error("Verification error:", error);
     res.status(500).json({ message: "Verification failed", error: error.message });
   }
 });
@@ -190,7 +189,6 @@ router.post("/login", limiter, async (req, res) => {
     });
  
   } catch (error) {
-    console.error('Login Error:', error);
     res.status(500).json({ 
       message: "Login failed", 
       error: process.env.NODE_ENV === 'development' ? error.message : undefined 
