@@ -61,155 +61,136 @@ router.post("/login", async (req, res) => {
 
 
 
-router.post("/login", limiter, async (req, res) => {
+router.post("/register", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    let { emailAddress, username, password } = req.body;
+    const email = Array.isArray(emailAddress) ? emailAddress[0] : emailAddress;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username and password are required" });
+    if (!validateInputs(email, username, password)) {
+      return res.status(400).json({ message: "Invalid input format" });
     }
 
-    const signInAttempt = await clerk.signIn.create({
-      identifier: username,
+    // Create user in Clerk with explicit email verification settings
+    const clerkUser = await clerk.users.createUser({
+      emailAddress: [email],
+      username,
       password,
+      verifications: {
+        emailAddress: {
+          strategy: "email_code"
+        }
+      }
     });
 
-    if (signInAttempt.status === "needs_second_factor") {
-      return res.status(202).json({ 
-        message: "MFA required",
-        signInId: signInAttempt.id
+    const newUser = new User({
+      clerkId: clerkUser.id,
+      username,
+      email,
+      isVerified: false,
+    });
+
+    await newUser.save();
+
+    res.status(201).json({
+      message: "Registration successful! Please check your email for a verification code.",
+      instructions: [
+        "1. Check your email inbox (and spam folder) for a message from Clerk",
+        "2. Copy the verification code from the email",
+        "3. Use that code along with your userId to verify your email"
+      ],
+      userId: clerkUser.id,
+      email: email
+    });
+
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+
+
+
+Clerk instance: {
+  __experimental_accountlessApplications: AccountlessApplicationAPI { request: [AsyncFunction (anonymous)] },
+  allowlistIdentifiers: AllowlistIdentifierAPI { request: [AsyncFunction (anonymous)] },
+  clients: ClientAPI { request: [AsyncFunction (anonymous)] },
+  emailAddresses: EmailAddressAPI { request: [AsyncFunction (anonymous)] },
+  invitations: InvitationAPI { request: [AsyncFunction (anonymous)] },
+  organizations: OrganizationAPI { request: [AsyncFunction (anonymous)] },
+  phoneNumbers: PhoneNumberAPI { request: [AsyncFunction (anonymous)] },
+  redirectUrls: RedirectUrlAPI { request: [AsyncFunction (anonymous)] },
+  sessions: SessionAPI { request: [AsyncFunction (anonymous)] },
+  signInTokens: SignInTokenAPI { request: [AsyncFunction (anonymous)] },
+  users: UserAPI { request: [AsyncFunction (anonymous)] },
+  domains: DomainAPI { request: [AsyncFunction (anonymous)] },
+  samlConnections: SamlConnectionAPI { request: [AsyncFunction (anonymous)] },
+  testingTokens: TestingTokenAPI { request: [AsyncFunction (anonymous)] },
+  authenticateRequest: [Function: authenticateRequest2],
+  debugRequestState: [Function: debugRequestState],
+  telemetry: TelemetryCollector {}
+}
+Available methods: [
+  '__experimental_accountlessApplications',
+  'allowlistIdentifiers',
+  'clients',
+  'emailAddresses',
+  'invitations',
+  'organizations',
+  'phoneNumbers',
+  'redirectUrls',
+  'sessions',
+  'signInTokens',
+  'users',
+  'domains',
+  'samlConnections',
+  'testingTokens',
+  'authenticateRequest',
+  'debugRequestState',
+  'telemetry'
+]
+
+
+
+
+router.post("/verify-email", limiter, async (req, res) => {
+  try {
+    const { code, userId } = req.body;
+
+    if (!code || !userId) {
+      return res.status(400).json({ error: "Verification code and userId are required" });
+    }
+
+    // Attempt verification using raw request method
+    const verification = await clerk.users.request('verifyEmailAddress', {
+      userId: userId,
+      code: code
+    });
+
+    if (verification.status === "verified") {
+      const user = await User.findOne({ clerkId: userId });
+      if (user) {
+        user.isVerified = true;
+        await user.save();
+      }
+
+      return res.status(200).json({
+        message: "Email verified successfully",
+        verified: true,
       });
     }
 
-    if (signInAttempt.status !== "complete") {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    return await completeSignIn(signInAttempt, username, res);
-
-  } catch (error) {
-    res.status(500).json({ message: "Login failed" });
-  }
-});
-
-// MFA Verification Route
-router.post("/verify-mfa", limiter, async (req, res) => {
-  try {
-    const { signInId, mfaCode, username } = req.body;
-
-    if (!signInId || !mfaCode || !username) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    const signInAttempt = await clerk.signIn.get(signInId);
-    
-    if (!signInAttempt || new Date(signInAttempt.expireAt) < new Date()) {
-      return res.status(401).json({ message: "MFA attempt expired" });
-    }
-
-    if (signInAttempt.totalAttempts >= MAX_MFA_ATTEMPTS) {
-      return res.status(401).json({ message: "Maximum MFA attempts exceeded" });
-    }
-
-    const mfaVerification = await clerk.signIn.attemptSecondFactor({
-      signInId,
-      strategy: "totp",
-      code: mfaCode,
-    });
-
-    if (mfaVerification.status !== "complete") {
-      return res.status(401).json({ message: "Invalid MFA code" });
-    }
-
-    return await completeSignIn(mfaVerification, username, res);
-
-  } catch (error) {
-    res.status(500).json({ message: "MFA verification failed" });
-  }
-});
-
-// MFA Setup Route
-router.post("/setup-mfa", async (req, res) => {
-  try {
-    const { username } = req.body;
-    const user = await User.findOne({ username });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const factor = await clerk.users.createTOTP(user.clerkId);
-    
-    res.json({
-      otpAuthUri: factor.otpAuthUri,
-      factorId: factor.id,
+    res.status(400).json({
+      message: "Verification failed",
+      verified: false,
     });
 
   } catch (error) {
-    res.status(500).json({ message: "MFA setup failed" });
-  }
-});
-
-// MFA Verification for Setup
-router.post("/verify-mfa-setup", async (req, res) => {
-  try {
-    const { username, factorId, code } = req.body;
-
-    if (!username || !factorId || !code) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    const user = await User.findOne({ username });
-    
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    await clerk.users.verifyTOTP({
-      userId: user.clerkId,
-      factorId,
-      code,
+    console.error("Verification error:", error);
+    res.status(500).json({
+      message: "Verification failed",
+      error: error.message,
     });
-
-    res.json({ message: "MFA setup completed successfully" });
-
-  } catch (error) {
-    res.status(500).json({ message: "MFA setup verification failed" });
   }
 });
-
-// Helper function to complete sign in process
-async function completeSignIn(signInAttempt, username, res) {
-  const user = await User.findOne({ username });
-
-  if (!user) {
-    return res.status(401).json({ message: "User does not exist" });
-  }
-
-  const accessToken = jwt.sign(
-    {
-      id: user._id,
-      isAdmin: user.isAdmin,
-    },
-    process.env.JWT_SEC,
-    { expiresIn: "15m" }
-  );
-
-  const refreshToken = jwt.sign(
-    {
-      id: user._id,
-      isAdmin: user.isAdmin,
-    },
-    process.env.JWT_REFRESH_SEC,
-    { expiresIn: "1d" }
-  );
-
-  await User.findByIdAndUpdate(user._id, { refreshToken });
-
-  const { password, refreshToken: storedRefreshToken, ...others } = user._doc;
-  return res.status(200).json({ ...others, accessToken });
-}
-
-
 
 

@@ -26,68 +26,98 @@ const validateUsername = (username) => {
   return username.length >= 3 && username.length <= 20 && /^[a-zA-Z0-9_]+$/.test(username);
 };
 
-// Register Route
+const validateInputs = (email, username, password) => {
+  return validateEmail(email) && validateUsername(username) && validatePassword(password);
+};
+
+const handleError = (res, error) => {
+  console.error('Error:', error);
+  if (error.code === 11000) {
+    return res.status(400).json({ message: "Username or email already exists" });
+  }
+  res.status(500).json({ 
+    message: error.message || "Registration failed",
+    details: process.env.NODE_ENV === 'development' ? error : undefined
+  });
+};
+
+//register
 router.post("/register", async (req, res) => {
   try {
     let { emailAddress, username, password } = req.body;
-
-    // Ensure emailAddress is a string if it's an array
     const email = Array.isArray(emailAddress) ? emailAddress[0] : emailAddress;
 
-    // Validate input
-    if (!email || !username || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!validateInputs(email, username, password)) {
+      return res.status(400).json({ message: "Invalid input format" });
     }
 
-    // Validate email format
-    if (!validateEmail(email)) {
-      return res.status(400).json({ message: "Invalid email format" });
-    }
-
-    // Validate username format
-    if (!validateUsername(username)) {
-      return res.status(400).json({ 
-        message: "Username must be 3-20 characters long and contain only letters, numbers, and underscores" 
-      });
-    }
-
-    // Validate password strength
-    if (!validatePassword(password)) {
-      return res.status(400).json({ 
-        message: "Password must contain at least 8 characters, including uppercase, lowercase, number, and special character" 
-      });
-    }
-
-    // Create user in Clerk
+    // Create user in Clerk with explicit email verification settings
     const clerkUser = await clerk.users.createUser({
-      emailAddress: [email], // Ensures Clerk gets an array
+      emailAddress: [email],
       username,
       password,
+      verifications: {
+        emailAddress: {
+          strategy: "email_code"
+        }
+      }
     });
 
-    // Create user in our database
     const newUser = new User({
       clerkId: clerkUser.id,
       username,
       email,
+      isVerified: false,
     });
 
     await newUser.save();
 
     res.status(201).json({
-      message: "Registration successful",
-      userId: newUser._id,
+      message: "Registration successful! Please check your email for a verification code.",
+      instructions: [
+        "1. Check your email inbox (and spam folder) for a message from Clerk",
+        "2. Copy the verification code from the email",
+        "3. Use that code along with your userId to verify your email"
+      ],
+      userId: clerkUser.id,
+      email: email
     });
 
   } catch (error) {
-    // MongoDB duplicate key error
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "Username or email already exists" });
-    }
-    res.status(500).json({ message: "Registration failed" });
+    handleError(res, error);
   }
 });
 
+
+// Verify Email Route
+router.post("/verify-email", limiter, async (req, res) => {
+  try {
+    const { code, userId } = req.body;
+
+    if (!code || !userId) {
+      return res.status(400).json({ error: "Verification code and userId are required" });
+    }
+
+    const verification = await clerk.users.request('POST', `/users/${userId}/verify_email_address`, {
+      code: code
+    });
+
+    if (verification.verified) {
+      const user = await User.findOne({ clerkId: userId });
+      if (user) {
+        user.isVerified = true;
+        await user.save();
+      }
+      return res.status(200).json({ message: "Email verified successfully", verified: true });
+    }
+
+    res.status(400).json({ message: "Verification failed", verified: false });
+
+  } catch (error) {
+    console.error("Verification error:", error);
+    res.status(500).json({ message: "Verification failed", error: error.message });
+  }
+});
 
 
 
@@ -95,58 +125,79 @@ router.post("/register", async (req, res) => {
 router.post("/login", limiter, async (req, res) => {
   try {
     const { username, password } = req.body;
-
-    // Validate input
+ 
     if (!username || !password) {
       return res.status(400).json({ message: "Username and password are required" });
     }
-
-    // Verify credentials with Clerk
-    const signInAttempt = await clerk.signIn.create({
-      identifier: username,
-      password,
+ 
+    // Find user in Clerk
+    const clerkUsers = await clerk.users.request('GET', '/users', {
+      username: username
     });
-
-    if (signInAttempt.status !== "complete") {
+ 
+    const clerkUser = clerkUsers[0];
+    if (!clerkUser) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
-
-    // Find user in our database
-    const user = await User.findOne({ username });
-
-    if (!user) {
-      return res.status(401).json({ message: "User does not exist" });
+ 
+    // Verify password
+    const signInAttempt = await clerk.users.request('POST', `/users/${clerkUser.id}/verify_password`, {
+      password: password
+    });
+ 
+    if (!signInAttempt.valid) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
-
+ 
+    // Check email verification
+    const primaryEmail = clerkUser.emailAddresses.find(email => email.id === clerkUser.primaryEmailAddressId);
+    if (!primaryEmail.verified) {
+      return res.status(403).json({ 
+        message: "Please verify your email before logging in",
+        requiresEmailVerification: true,
+        userId: clerkUser.id
+      });
+    }
+ 
+    // Find user in database
+    const user = await User.findOne({ clerkId: clerkUser.id });
+    if (!user) {
+      return res.status(401).json({ message: "User not found in database" });
+    }
+ 
     // Generate tokens
     const accessToken = jwt.sign(
-      {
-        id: user._id,
-        isAdmin: user.isAdmin,
-      },
+      { id: user._id, isAdmin: user.isAdmin },
       process.env.JWT_SEC,
       { expiresIn: "15m" }
     );
-
+ 
     const refreshToken = jwt.sign(
-      {
-        id: user._id,
-        isAdmin: user.isAdmin,
-      },
+      { id: user._id, isAdmin: user.isAdmin },
       process.env.JWT_REFRESH_SEC,
       { expiresIn: "1d" }
     );
-
-    // Store refresh token
+ 
+    // Update refresh token
     await User.findByIdAndUpdate(user._id, { refreshToken });
-
-    // Respond with the user data and tokens
+ 
+    // Return user data and tokens
     const { password: userPassword, refreshToken: storedRefreshToken, ...others } = user._doc;
-    res.status(200).json({ ...others, accessToken });
-
+    res.status(200).json({ 
+      ...others, 
+      accessToken,
+      verified: true
+    });
+ 
   } catch (error) {
-    res.status(500).json({ message: "Login failed" });
+    console.error('Login Error:', error);
+    res.status(500).json({ 
+      message: "Login failed", 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
-});
+ });
+
+
 
 module.exports = router;
