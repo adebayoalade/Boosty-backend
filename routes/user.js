@@ -9,7 +9,7 @@ const router = express.Router();
 
 // Initialize Clerk
 const clerk = createClerkClient({
-    apiKey: process.env.CLERK_SECRET_KEY,
+    secretKey: process.env.CLERK_SECRET_KEY,
 });
 
 // Input validation helpers
@@ -34,14 +34,14 @@ router.post("/forget-password", limiter, async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            // Return same message even if user not found to prevent email enumeration
             return res.status(200).json({
                 message: "If a user with this email exists, a password reset link has been sent"
             });
         }
 
-        await clerk.passwords.createPasswordReset({
-            emailAddress: email
+        //request method 
+        await clerk.users.request('POST', '/password_reset', {
+            email_address: email
         });
 
         res.status(200).json({
@@ -51,6 +51,7 @@ router.post("/forget-password", limiter, async (req, res) => {
         res.status(500).json({ error: "Unable to process password reset request" });
     }
 });
+
 
 // Reset Password
 router.post("/reset-password", limiter, async (req, res) => {
@@ -63,88 +64,21 @@ router.post("/reset-password", limiter, async (req, res) => {
             });
         }
 
-        const resetResult = await clerk.passwords.resetPassword({
+        const resetResult = await clerk.users.request('POST', '/password_reset/attempt', {
             token,
             password
         });
 
-        const user = await User.findOne({ email: resetResult.emailAddress });
-        if (user) {
-            const encryptedPassword = CryptoJS.AES.encrypt(
-                password,
-                process.env.PASS_SEC
-            ).toString();
-            user.password = encryptedPassword;
-            await user.save();
+        if (resetResult.status === 'completed') {
+            return res.status(200).json({ message: "Password reset successful" });
         }
 
-        res.status(200).json({ message: "Password reset successful" });
+        res.status(400).json({ error: "Password reset failed" });
     } catch (error) {
         res.status(500).json({ error: "Unable to reset password" });
     }
 });
 
-// Update user
-router.put("/:id", verifyTokenAndAuthorization, async(req, res) => {
-    try {
-        const user = await User.findById(req.params.id);
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        const updates = { ...req.body };
-
-        // Handle password update
-        if (updates.password) {
-            if (!validatePassword(updates.password)) {
-                return res.status(400).json({
-                    error: "Invalid password format"
-                });
-            }
-            updates.password = CryptoJS.AES.encrypt(
-                updates.password,
-                process.env.PASS_SEC
-            ).toString();
-            
-            await clerk.users.updateUser(user.clerkId, {
-                password: req.body.password
-            });
-        }
-
-        // Handle email update
-        if (updates.email) {
-            if (!validateEmail(updates.email)) {
-                return res.status(400).json({ error: "Invalid email format" });
-            }
-            const existingUser = await User.findOne({ email: updates.email });
-            if (existingUser && existingUser._id.toString() !== req.params.id) {
-                return res.status(400).json({ error: "Email already in use" });
-            }
-            await clerk.users.updateUser(user.clerkId, {
-                emailAddress: [updates.email]
-            });
-        }
-
-        // Handle username update
-        if (updates.username) {
-            await clerk.users.updateUser(user.clerkId, {
-                username: updates.username
-            });
-        }
-
-        const updatedUser = await User.findByIdAndUpdate(
-            req.params.id,
-            { $set: updates },
-            { new: true, runValidators: true }
-        );
-
-        const { password, ...userWithoutPassword } = updatedUser._doc;
-        res.status(200).json(userWithoutPassword);
-    } catch (error) {
-        console.error('Update error:', error);
-        res.status(500).json({ error: "Unable to update user" });
-    }
-});
 
 // Delete user
 router.delete("/:id", verifyTokenAndAuthorization, async(req, res) => {
