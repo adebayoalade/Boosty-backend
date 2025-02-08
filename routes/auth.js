@@ -75,9 +75,7 @@ router.post("/register", async (req, res) => {
     res.status(201).json({
       message: "Registration successful! Please check your email for a verification code.",
       instructions: [
-        "1. Check your email inbox (and spam folder) for a message from Clerk",
-        "2. Copy the verification code from the email",
-        "3. Use that code along with your userId to verify your email"
+        "Use that code along with your userId to verify your email"
       ],
       userId: clerkUser.id,
       email: email
