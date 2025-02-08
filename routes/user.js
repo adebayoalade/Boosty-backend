@@ -2,7 +2,6 @@ const express = require("express");
 const {createClerkClient} = require('@clerk/backend');
 const {verifyTokenAndAdmin, verifyTokenAndAuthorization} = require("../middleware/verifyToken");
 const User = require("../models/User");
-const CryptoJS = require("crypto-js");
 const limiter = require("../middleware/limiter")
 
 const router = express.Router();
