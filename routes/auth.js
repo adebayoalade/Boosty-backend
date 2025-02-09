@@ -51,18 +51,27 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Invalid input format" });
     }
 
-    // Create user in Clerk with explicit email verification settings
-    const clerkUser = await clerk.users.createUser({
-      emailAddress: [email],
-      username,
-      password,
-      verifications: {
-        emailAddress: {
-          strategy: "email_code"
+    let clerkUser;
+    try {
+      clerkUser = await clerk.users.createUser({
+        emailAddress: [email],
+        username,
+        password,
+        verifications: {
+          emailAddress: {
+            strategy: "email_code"
+          }
         }
-      }
-    });
+      });
+      
+    } catch (clerkError) {
+      return res.status(400).json({ 
+        message: "Failed to create user in authentication system",
+        error: clerkError.message 
+      });
+    }
 
+    // Only proceed with MongoDB save if Clerk user was created
     const newUser = new User({
       clerkId: clerkUser.id,
       username,
@@ -85,6 +94,8 @@ router.post("/register", async (req, res) => {
     handleError(res, error);
   }
 });
+
+
 
 
 // Verify Email Route
@@ -193,6 +204,9 @@ router.post("/login", limiter, async (req, res) => {
     });
   }
  });
+
+
+
 
 
 
