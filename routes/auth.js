@@ -31,7 +31,6 @@ const validateInputs = (email, username, password) => {
 };
 
 const handleError = (res, error) => {
-  console.error('Error:', error);
   if (error.code === 11000) {
     return res.status(400).json({ message: "Username or email already exists" });
   }
@@ -53,12 +52,28 @@ router.post("/register", async (req, res) => {
 
     let clerkUser;
     try {
+      // Create user with explicit verification settings
       clerkUser = await clerk.users.createUser({
         emailAddress: [email],
         username,
         password,
+        skipPasswordRequirements: false,
         verifications: {
           emailAddress: {
+            strategy: "email_code",
+            shouldVerify: true
+          }
+        },
+           signInOptions: {
+          allowedStrategies: ["email_code"]
+        }
+      });
+      
+      // Attempt to trigger verification email explicitly
+      await clerk.users.updateUser(clerkUser.id, {
+        verifications: {
+          emailAddress: {
+            status: "unverified",
             strategy: "email_code"
           }
         }
@@ -71,7 +86,6 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Only proceed with MongoDB save if Clerk user was created
     const newUser = new User({
       clerkId: clerkUser.id,
       username,
@@ -206,8 +220,7 @@ router.post("/login", limiter, async (req, res) => {
  });
 
 
-
-
+ 
 
 
 module.exports = router;
