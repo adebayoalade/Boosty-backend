@@ -14,6 +14,12 @@ router.post("/", async (req, res) => {
     try {
       const savedInvestor = await investor.save();
       res.status(201).json(savedInvestor);
+
+      const accessToken = jwt.sign(
+            { id: user._id, isAdmin: user.isAdmin },
+            process.env.JWT_SEC,
+            { expiresIn: "15m" }
+          );
     } catch (error) {
       res.status(400).json({ 
         message: "Failed to create investor" 
@@ -63,7 +69,7 @@ router.delete("/:id", verifyTokenAndAuthorization, async (req, res) => {
 
 
 // Get single investor by ID
-router.get("/:id", verifyTokenAndAdmin, async (req, res) => {
+router.get("/:id",  async (req, res) => {
     try {
       const investor = await Investor.findById(req.params.id);
       if (!investor) {
@@ -80,7 +86,7 @@ router.get("/:id", verifyTokenAndAdmin, async (req, res) => {
    });
 
 // Get all investors from database
-router.get("/", verifyTokenAndAdmin, async(req, res) => {
+router.get("/",  async(req, res) => {
     const query = req.query.new;
  try {
     const investors = query?

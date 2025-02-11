@@ -14,7 +14,7 @@ const userRoute = require("./routes/user");
 const authRoute = require("./routes/auth");
 const setupRoute = require("./routes/setup");
 const itemRoute = require("./routes/item");
-const paystackRoute = require("./routes/paystack");
+// const paystackRoute = require("./routes/paystack");
 const orderRoute = require("./routes/order");
 const investorRoute = require("./routes/investor");
 const partnerRoute = require("./routes/partner");
@@ -37,7 +37,7 @@ app.use(clerkMiddleware());
 
 app.use("/api/users", userRoute);
 app.use("/api/auth", authRoute);
-app.use("/api/checkout", paystackRoute);
+// app.use("/api/checkout", paystackRoute);
 app.use("/api/setup", setupRoute);
 app.use("/api/item", itemRoute);
 app.use("/api/order", orderRoute);

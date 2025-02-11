@@ -64,7 +64,7 @@ router.delete("/:id", verifyTokenAndAuthorization, async (req, res) => {
 
 
 // Get single investor by ID
-router.get("/:id", verifyTokenAndAdmin, async (req, res) => {
+router.get("/:id",  async (req, res) => {
     try {
       const partner = await Partner.findById(req.params.id);
       if (!partner) {
@@ -82,7 +82,7 @@ router.get("/:id", verifyTokenAndAdmin, async (req, res) => {
 
 
 // Get all investors from database
-router.get("/", verifyTokenAndAdmin, async(req, res) => {
+router.get("/", async(req, res) => {
     const query = req.query.new;
  try {
     const partners = query?
