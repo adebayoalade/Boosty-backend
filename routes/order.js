@@ -11,7 +11,7 @@ const {
 const Order = require("../models/Order");
 
 // Create order
-router.post("/",  async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
     const newOrder = new Order(req.body);
     try {
         const savedOrder = await newOrder.save();
@@ -70,7 +70,7 @@ router.get("/", verifyTokenAndAdmin, async (req, res) => {
 });
 
 // Checkout route
-router.post("/checkout",  async (req, res) => {
+router.post("/checkout", verifyToken, async (req, res) => {
     try {
         const { orderId } = req.body;
 
