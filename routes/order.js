@@ -9,91 +9,90 @@ const {
 
 const Order = require("../models/Order");
 
-//Create order
-router.post("/", verifyToken, async(req, res) => {
+// Create order
+router.post("/",  async (req, res) => {
     const newOrder = new Order(req.body);
     try {
         const savedOrder = await newOrder.save();
-
         res.status(200).json(savedOrder);
     } catch (error) {
-       res.status(500).json(error);
+        res.status(500).json(error);
     }
 });
 
-//Update order
-router.put("/:id", verifyTokenAndAdmin, async(req, res) => {
+// Update order
+router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
     try {
         const updatedOrder = await Order.findByIdAndUpdate(
-        req.params.id,
-        {
-            $set: req.body,
-        },
-        {
-            new: true,
-        }
-    );
+            req.params.id,
+            {
+                $set: req.body,
+            },
+            {
+                new: true,
+            }
+        );
         res.status(200).json(updatedOrder);
     } catch (error) {
         res.status(500).json(error);
     }
 });
 
-//Delete
-router.delete("/:id", verifyTokenAndAdmin, async(req, res) => {
+// Delete order
+router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
     try {
         await Order.findByIdAndDelete(req.params.id);
-        res.status(200).json({message: "Order has been deleted...."});
+        res.status(200).json({ message: "Order has been deleted...." });
     } catch (error) {
         res.status(500).json(error);
     }
 });
 
-//Get One Of The User Order
-router.get("/find/:userId", verifyTokenAndAuthorization, async(req, res) => {
+// Get user's orders
+router.get("/find/:userId", verifyTokenAndAuthorization, async (req, res) => {
     try {
-        const orders = await Order.find({userId: req.params.userId });
-
+        const orders = await Order.find({ userId: req.params.userId });
         res.status(200).json(orders);
     } catch (error) {
         res.status(500).json(error);
     }
 });
 
-
-//Get monthly income 
-router.get("/income", verifyTokenAndAdmin, async(req, res) => {
-    const date = new Date();
-    const lastMonth = new Date(date.setMonth(date.getMonth() -1 ));
-    const previousMonth = new Date(new Date().setMonth(lastMonth.getMonth() -1 ));
-
+// Get all orders (admin only)
+router.get("/", verifyTokenAndAdmin, async (req, res) => {
     try {
-        const income = await Order.aggregate([
-            {
-                $match: {
-                    createdAt: {$gte: previousMonth},
-                },
-            },
-            {
-               $project: {
-                month: { $month: "$createdAt" },
-                sales: "$amount",
-               },
-            },
-            {
-                $group: {
-                    _id: "$month",
-                    total: { $sum: "$sales" },
-                },
-            },
-        ]);
-        res.status(200).json(income);
+        const orders = await Order.find();
+        res.status(200).json(orders);
     } catch (error) {
         res.status(500).json(error);
     }
 });
 
+// Checkout route
+router.post("/checkout", verifyToken, async (req, res) => {
+    try {
+        const { orderId } = req.body;
 
+        // Validate order ID
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({ message: "Invalid order ID" });
+        }
 
+        // Find the order
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
 
-module.exports = router; // Export the router
+        // Update order status to "completed"
+        order.status = "completed";
+        await order.save();
+
+        // Send a success response
+        res.status(200).json({ message: "Checkout successful", order });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+module.exports = router;
