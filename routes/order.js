@@ -69,7 +69,7 @@ router.get("/", verifyTokenAndAdmin, async (req, res) => {
 });
 
 // Checkout route
-router.post("/checkout", verifyToken, async (req, res) => {
+router.post("/checkout",  async (req, res) => {
     try {
         const { orderId } = req.body;
 
